@@ -1,77 +1,92 @@
-var that;
-class Tab {
-    constructor(id) {
-        that = this;
-        this.main = document.querySelector(id);
-        this.add = this.main.querySelector('.tabadd');
-        this.ul = this.main.querySelector('.fisrstnav ul:first-child');
-        this.fsection = this.main.querySelector('.tabscon');
-        this.init();
-    }
-    init() {
-            this.updateNode();
+// 抽象tab类
+(function(window){
+    that = null
+    class Tab {
+        constructor(id){
+            that = this;
+            this.main = document.querySelector(id);
+            this.lis = this.main.getElementsByTagName('li')
+            this.sections = this.main.getElementsByTagName('section')
+            this.add = this.main.querySelector('.tabadd');
+            this.ul = this.main.querySelector('.fisrstnav ul:nth-of-type(1)');
+            this.fsection = this.main.querySelector('.tabscon');
+            this.init()
+        }
+    
+        init(){
             this.add.onclick = this.addTab;
-            for (var i = 0; i < this.lis.length; i++) {
-                this.lis[i].index = i;
+            // 初始化，让相关的元素绑定事件
+            for(var i = 0; i < this.lis.length; i++){
+                this.lis[i].dataset.index = i;
+                this.sections[i].dataset.index = i;
                 this.lis[i].onclick = this.toggleTab;
-                this.remove[i].onclick = this.removeTab;
-                this.spans[i].ondblclick = this.editTab;
-                this.sections[i].ondblclick = this.editTab;
+                this.lis[i].querySelector('.icon-guanbi').onclick = that.removeTab;
+                this.lis[i].querySelector('span:nth-of-type(1)').ondblclick = that.editTab;
+                this.sections[i].ondblclick = that.editTab;
             }
         }
-    updateNode() {
-            this.lis = this.main.querySelectorAll('li');
-            this.sections = this.main.querySelectorAll('section');
-            this.remove = this.main.querySelectorAll('.icon-guanbi');
-            this.spans = this.main.querySelectorAll('.fisrstnav li span:first-child');
-        }
-    toggleTab() {
+        toggleTab(){
             that.clearClass();
-            this.className = 'liactive';
-            that.sections[this.index].className = 'conactive';
+            // 始终要记住,this指代的永远是当前调用该方法的那个对象，上面将该方法作为了li的点击事件的回调函数，所以这里this将会指代触发事件的那个li
+            this.classList.add('liactive');
+            let sections = [];
+            for(let i = 0; i<that.sections.length;i++){
+                sections.push(that.sections[i]);
+            }
+            sections.find(item => item.dataset.index === this.dataset.index).classList.add('conactive');
         }
-    clearClass() {
-            for (var i = 0; i < this.lis.length; i++) {
-                this.lis[i].className = '';
-                this.sections[i].className = '';
+        clearClass(){
+            for(var i = 0; i < this.lis.length; i++){
+                this.lis[i].classList.remove('liactive');
+                this.sections[i].classList.remove('conactive');
             }
         }
-    addTab() {
-            that.clearClass();
+        addTab(){
             var random = Math.random();
-            var li = '<li class="liactive"><span>新选项卡</span><span class="iconfont icon-guanbi"></span></li>';
-            var section = '<section class="conactive">测试 ' + random + '</section>';
+            that.clearClass();
+            // 1.创建li元素和section
+            var li = '<li class="liactive"><span>新选项卡</span><span class="iconfont icon-guanbi"></span></li>'
+            var section = `<section class="conactive">测试${random}</section>`
+    
+            // 2.追加
             that.ul.insertAdjacentHTML('beforeend', li);
             that.fsection.insertAdjacentHTML('beforeend', section);
             that.init();
         }
-    removeTab(e) {
-            e.stopPropagation(); // 阻止冒泡 防止触发li 的切换点击事件
-            var index = this.parentNode.index;
-            console.log(index);
-            that.lis[index].remove();
-            that.sections[index].remove();
-            that.init();
-            if (document.querySelector('.liactive')) return;
-            index--;
-            that.lis[index] && that.lis[index].click();
+        removeTab(e){
+            e.stopPropagation();
+            // 这个时候this指代关闭按钮
+            this.parentElement.remove();
+            let sections = [];
+            for(let i = 0; i<that.sections.length;i++){
+                sections.push(that.sections[i]);
+            }
+            sections.find(item => item.dataset.index === this.parentElement.dataset.index).remove();
+            if(document.querySelector('.liactive')) return;
+            that.lis[that.lis.length-1] && that.lis[that.lis.length-1].click();
         }
-    editTab() {
-        var str = this.innerHTML;
-        window.getSelection ? window.getSelection().removeAllRanges() : document.selection.empty();
-        this.innerHTML = '<input type="text" />';
-        var input = this.children[0];
-        input.value = str;
-        input.select(); // 文本框里面的文字处于选定状态
-        input.onblur = function() {
-            this.parentNode.innerHTML = this.value;
-        };
-        input.onkeyup = function(e) {
-            if (e.keyCode === 13) {
-                this.blur();
+        editTab(){
+            // 双击后清除选定的文字
+            var str = this.innerHTML;
+            window.getSelection ? window.getSelection().removeAllRanges() : document.getSelection.empty()
+            this.innerHTML = `<input type="text" />`
+            this.children[0].value = str;
+            // 让文本框文字处于选定状态
+            this.children[0].select();
+            this.children[0].onkeyup = function(e){
+                this.onblur = null;
+                if(e.keyCode === 13){
+                    this.parentElement.innerHTML = this.value;
+                    this.onblur = function(){
+                        this.parentElement.innerHTML = str;
+                    }
+                }
+            }
+            this.children[0].onblur = function(){
+                this.parentElement.innerHTML = str;
             }
         }
     }
-
-}
-new Tab('#tab');
+    
+    let tab = new Tab('#tab');
+})(window)
